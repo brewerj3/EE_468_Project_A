@@ -17,7 +17,7 @@
 #define BUFFER_SIZE 80
 #define ARR_SIZE 80
 
-// #define DEBUG 1  /* In case you want debug messages */
+#define DEBUG 1  /* In case you want debug messages */
 
 void parse_args(char *buffer, char **args, size_t args_size, size_t *nargs) {
     char *buf_args[args_size];
