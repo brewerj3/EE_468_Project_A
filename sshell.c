@@ -66,7 +66,7 @@ int main(int argc, char *argv[], char *envp[]) {
                 printf("Argument %2i = %s\n", i + 1, args[i]);
             }
 #endif
-            if (!strcmp(args[0], "exit")) exit(0);
+            if (!strcmp(args[0], "exit")) exit(0);  // Ends the program
             pid = fork();
             if (pid) {  /* Parent */
 #ifdef DEBUG
