@@ -60,6 +60,12 @@ int main(int argc, char *argv[], char *envp[]) {
         parse_args(buffer, args, ARR_SIZE, &num_args);
 
         if (num_args > 0) {
+#ifdef DEBUG
+            printf("number of arguments = %zu\n", num_args);
+            for(int i = 0; i < num_args; i++) {
+                printf("Argument %2i = %s\n", i + 1, args[i]);
+            }
+#endif
             if (!strcmp(args[0], "exit")) exit(0);
             pid = fork();
             if (pid) {  /* Parent */
