@@ -67,12 +67,12 @@ int main(int argc, char *argv[], char *envp[]) {
             }
 #endif
             if (!strcmp(args[0], "exit")) exit(0);  // Ends the program
-            pid = fork();
+            pid = fork();                           // Forks the program once
             if (pid) {  /* Parent */
 #ifdef DEBUG
                 printf("Waiting for child (%d)\n", pid);
 #endif
-                pid = wait(NULL);
+                pid = wait(NULL);                   // Wait for the child to complete
 #ifdef DEBUG
                 printf("Child (%d) finished\n", pid);
 #endif
