@@ -4,3 +4,5 @@ project(EE_468_Project_A C)
 set(CMAKE_C_STANDARD 99)
 
 add_executable(sshell sshell.c)
+
+add_executable(test test.c)
