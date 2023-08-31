@@ -13,6 +13,7 @@ int main() {
         printf("child pid before fork = %i\n", pid);
         int childpid = fork();
         if(childpid) {
+            childpid = wait(NULL);
             printf("child pid after fork = %i\n", childpid);
         } else {
             printf("grandchild pid after fork = %i\n", childpid);
