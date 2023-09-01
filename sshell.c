@@ -67,6 +67,16 @@ int main(int argc, char *argv[], char *envp[]) {
             }
 #endif
             if (!strcmp(args[0], "exit")) exit(0);  // Ends the program
+#ifdef DEBUG
+            int count = 0;
+            for (int i = 0; i < num_args; i++) {
+                if(!strcmp(args[i], "|")) {
+                    count++;
+                }
+            }
+            printf("number of | arguments = %i\n", count);
+#endif
+
             pid = fork();                           // Forks the program once
             if (pid) {  /* Parent */
 #ifdef DEBUG
