@@ -17,7 +17,34 @@
 #define BUFFER_SIZE 80
 #define ARR_SIZE 80
 
-#define DEBUG 1  /* In case you want debug messages */
+//#define DEBUG 1  /* In case you want debug messages */
+
+// This function will take in an array of char pointers and split it into two when it finds a |
+void
+splitter(char **argToSplit, char **splitOne, char **splitTwo, size_t args_size, size_t *nargsSplit, size_t *nargsOne,
+         size_t *nargsTwo) {
+    // splitOne is an array of char pointers the function caller will execute
+    // splitTwo is an array to be passed to the child
+    size_t i = 0;
+
+    for (; i < *nargsSplit; i++) {
+        if (!strcmp(argToSplit[i], "|")) {
+            break;
+        } else {
+            splitOne[i] = argToSplit[i];
+        }
+    }
+    splitOne[i + 1] = NULL;
+    *nargsOne = i;
+    i++;    // Increment by one to skip |
+    size_t count = 0;
+    for (; i < *nargsSplit; i++) {
+        splitTwo[i] = argToSplit[i];
+        count++;
+    }
+    splitTwo[i + 1] = NULL;
+    *nargsTwo = count;
+}
 
 void parse_args(char *buffer, char **args, size_t args_size, size_t *nargs) {
     char *buf_args[args_size];
@@ -67,18 +94,23 @@ int main(int argc, char *argv[], char *envp[]) {
             }
 #endif
             if (!strcmp(args[0], "exit")) exit(0);  // Ends the program
-#ifdef DEBUG
             int count = 0;
             for (int i = 0; i < num_args; i++) {
-                if(!strcmp(args[i], "|")) {
+                if (!strcmp(args[i], "|")) {
                     count++;
                 }
             }
-            printf("number of | arguments = %i\n", count);
+            if (count > 4) {
+                printf("To many | arguments. Maximum is 4, you entered %i\n", count);
+                continue;
+            }
+#ifdef DEBUG
+            printf("number of pipe | arguments = %i\n", count);
 #endif
 
             pid = fork();                           // Forks the program once
             if (pid) {  /* Parent */
+
 #ifdef DEBUG
                 printf("Waiting for child (%d)\n", pid);
 #endif
@@ -87,7 +119,30 @@ int main(int argc, char *argv[], char *envp[]) {
                 printf("Child (%d) finished\n", pid);
 #endif
             } else {  /* Child executing the command */
-                if (execvp(args[0], args)) {
+                // Determine if another fork is needed
+                if (count > 0) { // The args must be split and another fork created
+                    --count;
+                    char *argsToExecuteOne[ARR_SIZE];
+                    size_t numArgsExecute;
+                    char *argsToPassOnOne[ARR_SIZE];
+                    size_t numArgsPass;
+
+                    splitter(args, argsToExecuteOne, argsToPassOnOne, ARR_SIZE, &num_args, &numArgsExecute,
+                             &numArgsPass);
+
+                    // Set up pipes
+
+                    int childpid;
+                    childpid = fork();
+                    if (childpid == -1) {
+                        printf("Child fork failed\n");
+                        exit(1);
+                    } else if (childpid == 0) {  // Child
+
+                    } else {    // Parent
+                        // Execute argsToExecuteOne
+                    }
+                } else if (execvp(args[0], args)) {
                     puts(strerror(errno));
                     exit(127);
                 }
