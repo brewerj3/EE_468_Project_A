@@ -14,15 +14,14 @@
 #include <errno.h>
 #include <sys/types.h>
 
+
 #define BUFFER_SIZE 80
 #define ARR_SIZE 80
 
 //#define DEBUG 1  /* In case you want debug messages */
 
 // This function will take in an array of char pointers and split it into two when it finds a |
-void
-splitter(char **argToSplit, char **splitOne, char **splitTwo, size_t args_size, size_t *nargsSplit, size_t *nargsOne,
-         size_t *nargsTwo) {
+void splitter(char **argToSplit, char **splitOne, char **splitTwo, size_t args_size, const size_t *nargsSplit, size_t *nargsOne, size_t *nargsTwo) {
     // splitOne is an array of char pointers the function caller will execute
     // splitTwo is an array to be passed to the child
     size_t i = 0;
@@ -131,7 +130,8 @@ int main(int argc, char *argv[], char *envp[]) {
                              &numArgsPass);
 
                     // Set up pipes
-
+                    int pipeInOne[2], pipeOutOne[2];
+                    if(pipe(pipeInOne) < 0) error()
                     int childpid;
                     childpid = fork();
                     if (childpid == -1) {
