@@ -9,6 +9,4 @@ add_executable(test test.c)
 
 add_executable(pipe pipe.c)
 
-add_executable(remake shell2.c)
-
 file(COPY almamater DESTINATION ${CMAKE_BINARY_DIR})

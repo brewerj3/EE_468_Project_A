@@ -174,7 +174,6 @@ int main(int argc, char *argv[], char *envp[]) {
                     } else {
                         // Parent
 
-
                         // Close the pipe ends the child used
                         close(in[0]);
                         close(out[1]);
