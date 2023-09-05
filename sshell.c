@@ -134,6 +134,20 @@ int main(int argc, char *argv[], char *envp[]) {
                     splitter(args, argsToExecuteOne, argsToPassOnOne, ARR_SIZE, &num_args, &numArgsExecute,
                              &numArgsPass);
 
+
+#ifdef DEBUG
+                    printf("Grandchild argsToPassOn = %s\n", argsToPassOnOne[0]);
+                    printf("Grandchild number of arguments = %zu\n", numArgsPass);
+                    for(int i = 0; i < numArgsPass; i++) {
+                        printf(" grandchild Argument %2i = %s\n", i + 1, argsToPassOnOne[i]);
+                    }
+                    printf("Parent argsToExecute = %s\n", argsToExecuteOne[0]);
+
+                    printf("Parent number of arguments = %zu\n", numArgsExecute);
+                    for(int i = 0; i < numArgsExecute; i++) {
+                        printf(" Parent Argument %2i = %s\n", i + 1, argsToExecuteOne[i]);
+                    }
+#endif
                     // Set up pipes
                     int pipeInOne[2], pipeOutOne[2];
                     if(pipe(pipeInOne) < 0) error("Pipe in");
@@ -145,6 +159,7 @@ int main(int argc, char *argv[], char *envp[]) {
                         printf("Child fork failed\n");
                         exit(1);
                     } else if (childpid == 0) {  // Child
+
                         // Close stdin, stdout, stderr
                         close(0);
                         close(1);
@@ -157,9 +172,7 @@ int main(int argc, char *argv[], char *envp[]) {
                         close(pipeInOne[1]);
                         close(pipeOutOne[0]);
                         // execute argument passed to child
-#ifdef DEBUG
-                        printf("Grandchild argsToPassOn = %s\n", argsToPassOnOne[0]);
-#endif
+
                         if(execvp(argsToPassOnOne[0], argsToPassOnOne)) {
                             puts(strerror(errno));
                             exit(127);
@@ -169,13 +182,12 @@ int main(int argc, char *argv[], char *envp[]) {
                         // Close pipe ends child would use
                         close(pipeInOne[0]);
                         close(pipeOutOne[1]);
+
                         // Close stdout then replace with our pipes
                         close(1);
-                        // replace stdout with pipe
+                        // Replace stdout with pipe
                         dup2(pipeInOne[1], 1);
-#ifdef DEBUG
-                        printf("Parent argsToExecute = %s\n", argsToExecuteOne[0]);
-#endif
+
                         if(execvp(argsToExecuteOne[0], argsToExecuteOne)) {
                             puts(strerror(errno));
                             exit(127);
