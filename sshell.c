@@ -18,7 +18,9 @@
 #define BUFFER_SIZE 80
 #define ARR_SIZE 80
 
-//#define DEBUG 1  /* In case you want debug messages */
+#define DEBUG 1  /* In case you want debug messages */
+
+void error(char *s);
 
 // This function will take in an array of char pointers and split it into two when it finds a |
 void splitter(char **argToSplit, char **splitOne, char **splitTwo, size_t args_size, const size_t *nargsSplit, size_t *nargsOne, size_t *nargsTwo) {
@@ -120,6 +122,9 @@ int main(int argc, char *argv[], char *envp[]) {
             } else {  /* Child executing the command */
                 // Determine if another fork is needed
                 if (count > 0) { // The args must be split and another fork created
+#ifdef DEBUG
+                    printf("grandchild required, count = %i\n", count);
+#endif
                     --count;
                     char *argsToExecuteOne[ARR_SIZE];
                     size_t numArgsExecute;
@@ -131,16 +136,50 @@ int main(int argc, char *argv[], char *envp[]) {
 
                     // Set up pipes
                     int pipeInOne[2], pipeOutOne[2];
-                    if(pipe(pipeInOne) < 0) error()
+                    if(pipe(pipeInOne) < 0) error("Pipe in");
+                    if(pipe(pipeOutOne) < 0) error("Pipe out");
+
                     int childpid;
                     childpid = fork();
                     if (childpid == -1) {
                         printf("Child fork failed\n");
                         exit(1);
                     } else if (childpid == 0) {  // Child
-
+                        // Close stdin, stdout, stderr
+                        close(0);
+                        close(1);
+                        close(2);
+                        // Make our pipes our new stdin, stdout, and stderr
+                        dup2(pipeInOne[0], 0);
+                        dup2(pipeOutOne[1], 1);
+                        dup2(pipeOutOne[1], 2);
+                        // close other end of pipe that parent will use
+                        close(pipeInOne[1]);
+                        close(pipeOutOne[0]);
+                        // execute argument passed to child
+#ifdef DEBUG
+                        printf("Grandchild argsToPassOn = %s\n", argsToPassOnOne[0]);
+#endif
+                        if(execvp(argsToPassOnOne[0], argsToPassOnOne)) {
+                            puts(strerror(errno));
+                            exit(127);
+                        }
                     } else {    // Parent
                         // Execute argsToExecuteOne
+                        // Close pipe ends child would use
+                        close(pipeInOne[0]);
+                        close(pipeOutOne[1]);
+                        // Close stdout then replace with our pipes
+                        close(1);
+                        // replace stdout with pipe
+                        dup2(pipeInOne[1], 1);
+#ifdef DEBUG
+                        printf("Parent argsToExecute = %s\n", argsToExecuteOne[0]);
+#endif
+                        if(execvp(argsToExecuteOne[0], argsToExecuteOne)) {
+                            puts(strerror(errno));
+                            exit(127);
+                        }
                     }
                 } else if (execvp(args[0], args)) {
                     puts(strerror(errno));
