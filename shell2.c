@@ -22,6 +22,11 @@
 
 void error(char *s);
 
+// Split character array into two character arrays
+void toSplit(char **argToSplit, char **splitArgs, size_t args_size, size_t *nargsToSplit, size_t *splitNArgs) {
+
+}
+
 // This function will take in an array of char pointers and split it into two when it finds a |
 void splitter(char **argToSplit, char **splitOne, char **splitTwo, size_t args_size, const size_t *nargsToSplit,
               size_t *nargsOne, size_t *nargsTwo) {
@@ -120,6 +125,32 @@ int main(int argc, char *argv[], char *envp[]) {
                 printf("Child (%d) finished\n", pid);
 #endif
             } else {  /* Child executing the command */
+                if (count > 0) {
+                    // Enter a for loop to execute each pipe sequentially
+                    for(int i = 0; i < count; i++) {
+                        // Pipe declarations
+                        int in[2], out[2];
+                        // Character buffer input
+                        char buf[1000];
+
+                        // Create pipes
+                        if (pipe(in) < 0) error("pipe in");
+                        if (pipe(out) < 0) error("pipe out");
+
+                        // Argument holder declarations
+                        char *toExecute[ARR_SIZE];
+                        size_t nArgsExecute;
+
+                        // Split the args into two args by the first encountered |
+                        splitter(args, toExecute, args, ARR_SIZE, &num_args, &nArgsExecute, &num_args);
+
+
+                    }
+                } else if (execvp(args[0], args)) {
+                    puts(strerror(errno));
+                    exit(127);
+                }
+                /* Deprecated
                 // Determine if another fork is needed
                 if (count > 0) { // The args must be split and another fork created
 #ifdef DEBUG
@@ -193,10 +224,9 @@ int main(int argc, char *argv[], char *envp[]) {
                             exit(127);
                         }
                     }
-                } else if (execvp(args[0], args)) {
-                    puts(strerror(errno));
-                    exit(127);
-                }
+                } else
+                 */
+
             }
 
         }

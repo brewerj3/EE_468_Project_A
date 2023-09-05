@@ -8,3 +8,5 @@ add_executable(sshell sshell.c)
 add_executable(test test.c)
 
 add_executable(pipe pipe.c)
+
+add_executable(remake shell2.c)
