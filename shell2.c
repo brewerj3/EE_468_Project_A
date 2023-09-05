@@ -17,6 +17,7 @@
 
 #define BUFFER_SIZE 80
 #define ARR_SIZE 80
+#define BUFF 1000
 
 #define DEBUG 1  /* In case you want debug messages */
 
@@ -131,7 +132,8 @@ int main(int argc, char *argv[], char *envp[]) {
                         // Pipe declarations
                         int in[2], out[2], childPid;
                         // Character buffer input
-                        char buf[1000];
+                        char buf[BUFF];
+                        buf[0] = '\0';
 
                         // Create pipes
                         if (pipe(in) < 0) error("pipe in");
@@ -145,9 +147,46 @@ int main(int argc, char *argv[], char *envp[]) {
                         splitter(args, toExecute, args, ARR_SIZE, &num_args, &nArgsExecute, &num_args);
                         childPid = fork();
                         if(childPid == 0) {
-                            //Child
+                            // Child
+
+                            // Close stdin, stdout, sterr
+                            close(0);
+                            close(1);
+                            close(2);
+
+                            // Make pipes new stdin, stdout, and stderr
+                            dup2(in[0], 0);
+                            dup2(out[1], 1);
+                            dup2(out[1], 2);
+
+                            // Close ends of pipe that parent will use
+                            close(in[1]);
+                            close(out[0]);
+
+                            // Execute the command with execvp
+                            if(execvp(toExecute[0], toExecute)) {
+                                puts(strerror(errno));
+                                exit(127);
+                            }
+                            exit(1);
                         } else {
                             // Parent
+
+                            // Close the pipe ends the child used
+                            close(in[0]);
+                            close(out[1]);
+
+                            // Write data to the child as input for command
+                            if(buf[0] != '\0') {
+                                write(in[1], buf, strlen(buf));
+                            }
+                            // Close the pipe so the child does not block execution
+                            // This sends EOF to the child on it's stdin
+                            close(in[1]);
+
+                            int n = read(out[0], buf, BUFF - 1);
+                            buf[n] = 0;
+                            close(out[0]);
                         }
 
                     }
@@ -231,9 +270,7 @@ int main(int argc, char *argv[], char *envp[]) {
                     }
                 } else
                  */
-
             }
-
         }
     }
     return 0;
