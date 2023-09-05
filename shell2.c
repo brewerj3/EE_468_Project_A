@@ -145,12 +145,16 @@ int main(int argc, char *argv[], char *envp[]) {
 
                         // Split the args into two args by the first encountered |
                         splitter(args, toExecute, args, ARR_SIZE, &num_args, &nArgsExecute, &num_args);
+
                         childPid = fork();
-                        if(childPid == 0) {
+                        if(childPid == -1) {
+                            printf("grandchild for error\n");
+                        }else if(childPid == 0) {
                             // Child
 
 #ifdef DEBUG
 // Add debug output here
+                            printf("Command Grandchild is executing = %s\n", toExecute[0]);
 #endif
 
                             // Close stdin, stdout, sterr
@@ -172,14 +176,16 @@ int main(int argc, char *argv[], char *envp[]) {
                                 puts(strerror(errno));
                                 exit(127);
                             }
-                            exit(1);
+                            //exit(1);
                         } else {
                             // Parent
+
 
                             // Close the pipe ends the child used
                             close(in[0]);
                             close(out[1]);
 
+                            usleep(1000);
                             // Write data to the child as input for command
                             if(buf[0] != '\0') {
                                 write(in[1], buf, strlen(buf));
