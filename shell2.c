@@ -131,7 +131,7 @@ int main(int argc, char *argv[], char *envp[]) {
                 buf[0] = '\0';
 
                     // Enter a for loop to execute each pipe sequentially
-                    for(int i = 0; i < count; i++) {
+                    for(int i = 0; i <= count; i++) {
                         // Pipe declarations
                         int in[2], out[2], childPid;
 
@@ -188,6 +188,7 @@ int main(int argc, char *argv[], char *envp[]) {
                             usleep(1000);
                             // Write data to the child as input for command
                             if(buf[0] != '\0') {
+                                printf("writing to grandchild\n");
                                 write(in[1], buf, strlen(buf));
                             }
                             // Close the pipe so the child does not block execution
