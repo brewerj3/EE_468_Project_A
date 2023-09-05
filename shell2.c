@@ -126,14 +126,14 @@ int main(int argc, char *argv[], char *envp[]) {
                 printf("Child (%d) finished\n", pid);
 #endif
             } else {  /* Child executing the command */
-                if (count > 0) {
+                // Character buffer input
+                char buf[BUFF];
+                buf[0] = '\0';
+
                     // Enter a for loop to execute each pipe sequentially
                     for(int i = 0; i < count; i++) {
                         // Pipe declarations
                         int in[2], out[2], childPid;
-                        // Character buffer input
-                        char buf[BUFF];
-                        buf[0] = '\0';
 
                         // Create pipes
                         if (pipe(in) < 0) error("pipe in");
@@ -148,6 +148,10 @@ int main(int argc, char *argv[], char *envp[]) {
                         childPid = fork();
                         if(childPid == 0) {
                             // Child
+
+#ifdef DEBUG
+// Add debug output here
+#endif
 
                             // Close stdin, stdout, sterr
                             close(0);
@@ -187,13 +191,12 @@ int main(int argc, char *argv[], char *envp[]) {
                             int n = read(out[0], buf, BUFF - 1);
                             buf[n] = 0;
                             close(out[0]);
+                            childPid = wait(NULL);
                         }
-
                     }
-                } else if (execvp(args[0], args)) {
-                    puts(strerror(errno));
-                    exit(127);
-                }
+                    printf("%s\n",buf);
+                    exit(0);
+
                 /* Deprecated
                 // Determine if another fork is needed
                 if (count > 0) { // The args must be split and another fork created
