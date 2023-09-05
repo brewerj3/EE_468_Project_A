@@ -129,7 +129,7 @@ int main(int argc, char *argv[], char *envp[]) {
                     // Enter a for loop to execute each pipe sequentially
                     for(int i = 0; i < count; i++) {
                         // Pipe declarations
-                        int in[2], out[2];
+                        int in[2], out[2], childPid;
                         // Character buffer input
                         char buf[1000];
 
@@ -143,7 +143,12 @@ int main(int argc, char *argv[], char *envp[]) {
 
                         // Split the args into two args by the first encountered |
                         splitter(args, toExecute, args, ARR_SIZE, &num_args, &nArgsExecute, &num_args);
-
+                        childPid = fork();
+                        if(childPid == 0) {
+                            //Child
+                        } else {
+                            // Parent
+                        }
 
                     }
                 } else if (execvp(args[0], args)) {

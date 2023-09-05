@@ -204,4 +204,7 @@ int main(int argc, char *argv[], char *envp[]) {
     return 0;
 }
 
-
+void error(char *s) {
+    perror(s);
+    exit(1);
+}
