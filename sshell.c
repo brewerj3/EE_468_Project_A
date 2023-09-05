@@ -17,8 +17,9 @@
 
 #define BUFFER_SIZE 80
 #define ARR_SIZE 80
+#define BUFF 10000
 
-#define DEBUG 1  /* In case you want debug messages */
+//#define DEBUG 1  /* In case you want debug messages */
 
 void error(char *s);
 
@@ -120,91 +121,89 @@ int main(int argc, char *argv[], char *envp[]) {
                 printf("Child (%d) finished\n", pid);
 #endif
             } else {  /* Child executing the command */
-                // Determine if another fork is needed
-                if (count > 0) { // The args must be split and another fork created
+                // Character buffer input
+                char buf[BUFF];
+                buf[0] = '\0';
+
+                // Enter a for loop to execute each pipe sequentially
+                for (int i = 0; i <= count; i++) {
+                    // Pipe declarations
+                    int in[2], out[2], childPid;
+
+                    // Create pipes
+                    if (pipe(in) < 0) error("pipe in");
+                    if (pipe(out) < 0) error("pipe out");
+
+                    // Argument holder declarations
+                    char *toExecute[ARR_SIZE];
+                    size_t nArgsExecute;
+
+                    // Split the args into two args by the first encountered |
+                    splitter(args, toExecute, args, ARR_SIZE, &num_args, &nArgsExecute, &num_args);
+
+                    childPid = fork();
+                    if (childPid == -1) {
+                        printf("grandchild fork error\n");
+                    } else if (childPid == 0) {
+                        // Child
+
 #ifdef DEBUG
-                    printf("grandchild required, count = %i\n", count);
+                        // Add debug output here
+                            printf("Command Grandchild is executing = %s\n", toExecute[0]);
 #endif
-                    --count;
-                    char *argsToExecuteOne[ARR_SIZE];
-                    size_t numArgsExecute;
-                    char *argsToPassOnOne[ARR_SIZE];
-                    size_t numArgsPass;
-
-                    splitter(args, argsToExecuteOne, argsToPassOnOne, ARR_SIZE, &num_args, &numArgsExecute,
-                             &numArgsPass);
-
-
-#ifdef DEBUG
-                    printf("Grandchild argsToPassOn = %s\n", argsToPassOnOne[0]);
-                    printf("Grandchild number of arguments = %zu\n", numArgsPass);
-                    for (int i = 0; i < numArgsPass; i++) {
-                        printf(" grandchild Argument %2i = %s\n", i + 1, argsToPassOnOne[i]);
-                    }
-                    printf("Parent argsToExecute = %s\n", argsToExecuteOne[0]);
-
-                    printf("Parent number of arguments = %zu\n", numArgsExecute);
-                    for (int i = 0; i < numArgsExecute; i++) {
-                        printf(" Parent Argument %2i = %s\n", i + 1, argsToExecuteOne[i]);
-                    }
-#endif
-                    // Set up pipes
-                    int pipeInOne[2], pipeOutOne[2];
-                    if (pipe(pipeInOne) < 0) error("Pipe in");
-                    if (pipe(pipeOutOne) < 0) error("Pipe out");
-
-                    int childpid;
-                    childpid = fork();
-                    if (childpid == -1) {
-                        printf("Child fork failed\n");
-                        exit(1);
-                    } else if (childpid == 0) {  // Child
 
                         // Close stdin, stdout, stderr
                         close(0);
                         close(1);
                         close(2);
-                        // Make our pipes our new stdin, stdout, and stderr
-                        dup2(pipeInOne[0], 0);
-                        dup2(pipeOutOne[1], 1);
-                        dup2(pipeOutOne[1], 2);
-                        // close other end of pipe that parent will use
-                        close(pipeInOne[1]);
-                        close(pipeOutOne[0]);
-                        // execute argument passed to child
 
-                        if (execvp(argsToPassOnOne[0], argsToPassOnOne)) {
+                        // Make pipes new stdin, stdout, and stderr
+                        dup2(in[0], 0);
+                        dup2(out[1], 1);
+                        dup2(out[1], 2);
+
+                        // Close ends of pipe that parent will use
+                        close(in[1]);
+                        close(out[0]);
+
+                        // Execute the command with execvp
+                        if (execvp(toExecute[0], toExecute)) {
                             puts(strerror(errno));
                             exit(127);
                         }
-                    } else {    // Parent
-                        // Execute argsToExecuteOne
-                        // Close pipe ends child would use
-                        close(pipeInOne[0]);
-                        close(pipeOutOne[1]);
+                    } else {
+                        // Parent
 
-                        // Close stdout then replace with our pipes
-                        close(1);
-                        // Replace stdout with pipe
-                        dup2(pipeInOne[1], 1);
 
-                        if (execvp(argsToExecuteOne[0], argsToExecuteOne)) {
-                            puts(strerror(errno));
-                            exit(127);
+                        // Close the pipe ends the child used
+                        close(in[0]);
+                        close(out[1]);
+
+                        usleep(1000);
+                        // Write data to the child as input for command
+                        if (buf[0] != '\0') {
+#ifdef DEBUG
+                            printf("writing to grandchild\n");
+#endif
+                            write(in[1], buf, strlen(buf));
                         }
+                        // Close the pipe so the child does not block execution
+                        // This sends EOF to the child on it's stdin
+                        close(in[1]);
+
+                        int n = read(out[0], buf, BUFF - 1);
+                        buf[n] = 0;
+                        close(out[0]);
+                        childPid = wait(NULL);
                     }
-                } else if (execvp(args[0], args)) {
-                    puts(strerror(errno));
-                    exit(127);
                 }
+                // After for loop print what was returned by the last grandchild
+                printf("%s\n", buf);
+                exit(0);
             }
-
         }
     }
     return 0;
 }
 
-void error(char *s) {
-    perror(s);
-    exit(1);
-}
+
