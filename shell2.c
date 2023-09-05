@@ -17,7 +17,7 @@
 
 #define BUFFER_SIZE 80
 #define ARR_SIZE 80
-#define BUFF 1000
+#define BUFF 10000
 
 //#define DEBUG 1  /* In case you want debug messages */
 
