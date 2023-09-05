@@ -19,14 +19,9 @@
 #define ARR_SIZE 80
 #define BUFF 1000
 
-#define DEBUG 1  /* In case you want debug messages */
+//#define DEBUG 1  /* In case you want debug messages */
 
 void error(char *s);
-
-// Split character array into two character arrays
-void toSplit(char **argToSplit, char **splitArgs, size_t args_size, size_t *nargsToSplit, size_t *splitNArgs) {
-
-}
 
 // This function will take in an array of char pointers and split it into two when it finds a |
 void splitter(char **argToSplit, char **splitOne, char **splitTwo, size_t args_size, const size_t *nargsToSplit,
@@ -148,7 +143,7 @@ int main(int argc, char *argv[], char *envp[]) {
 
                         childPid = fork();
                         if(childPid == -1) {
-                            printf("grandchild for error\n");
+                            printf("grandchild fork error\n");
                         }else if(childPid == 0) {
                             // Child
 
@@ -188,7 +183,9 @@ int main(int argc, char *argv[], char *envp[]) {
                             usleep(1000);
                             // Write data to the child as input for command
                             if(buf[0] != '\0') {
+#ifdef DEBUG
                                 printf("writing to grandchild\n");
+#endif
                                 write(in[1], buf, strlen(buf));
                             }
                             // Close the pipe so the child does not block execution
@@ -201,6 +198,7 @@ int main(int argc, char *argv[], char *envp[]) {
                             childPid = wait(NULL);
                         }
                     }
+                    // After for loop print what was returned by the last grandchild
                     printf("%s\n",buf);
                     exit(0);
 
