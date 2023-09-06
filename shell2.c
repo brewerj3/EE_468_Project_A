@@ -128,13 +128,13 @@ int main(int argc, char *argv[], char *envp[]) {
                 // Enter a for loop to execute each pipe sequentially
                 for (int i = 0; i <= count; i++) {
                     // Pipe declarations
-                    int in[2], out[2], childPid;
-                    int pipeIn[count][2];
-                    int pipeOut[count][2];
+                    int childPid;
+                    int pipeIn[count + 1][2];
+                    int pipeOut[count + 1][2];
 
                     // Create pipes
-                    if (pipe(in) < 0) error("pipe in");
-                    if (pipe(out) < 0) error("pipe out");
+                    if(pipe(pipeIn[i]) < 0) error("pipe in");
+                    if(pipe(pipeOut[i]) < 0) error("pipe out");
 
                     // Argument holder declarations
                     char *toExecute[ARR_SIZE];
@@ -166,13 +166,13 @@ int main(int argc, char *argv[], char *envp[]) {
                             close(1);
                             close(2);
                             // Make pipes new stdin, stdout, and stderr
-                            dup2(in[0], 0);
-                            dup2(out[1], 1);
-                            dup2(out[1], 2);
+                            dup2(pipeIn[i][0], 0);
+                            dup2(pipeOut[i][1], 1);
+                            dup2(pipeOut[i][1], 2);
 
                             // Close ends of pipe that parent will use
-                            close(in[1]);
-                            close(out[0]);
+                            close(pipeIn[i][1]);
+                            close(pipeOut[i][0]);
                         }
 
                         // Execute the command with execvp
