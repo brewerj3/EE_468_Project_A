@@ -129,6 +129,8 @@ int main(int argc, char *argv[], char *envp[]) {
                 for (int i = 0; i <= count; i++) {
                     // Pipe declarations
                     int in[2], out[2], childPid;
+                    int pipeIn[count][2];
+                    int pipeOut[count][2];
 
                     // Create pipes
                     if (pipe(in) < 0) error("pipe in");
@@ -149,28 +151,36 @@ int main(int argc, char *argv[], char *envp[]) {
 
 #ifdef DEBUG
                         // Add debug output here
-                            printf("Command Grandchild is executing = %s\n", toExecute[0]);
+                        printf("Command Grandchild is executing = %s, i = %i\n", toExecute[0], i);
 #endif
 
-                        // Close stdin, stdout, stderr
-                        close(0);
-                        close(1);
-                        close(2);
+                        if(count == i) {
+                            // Don't close stdout on the last one.
+                            // Close stdin, stderr
+                            close(0);
+                            close(2);
 
-                        // Make pipes new stdin, stdout, and stderr
-                        dup2(in[0], 0);
-                        dup2(out[1], 1);
-                        dup2(out[1], 2);
+                        } else {
+                            // Close stdin, stdout, stderr
+                            close(0);
+                            close(1);
+                            close(2);
+                            // Make pipes new stdin, stdout, and stderr
+                            dup2(in[0], 0);
+                            dup2(out[1], 1);
+                            dup2(out[1], 2);
 
-                        // Close ends of pipe that parent will use
-                        close(in[1]);
-                        close(out[0]);
+                            // Close ends of pipe that parent will use
+                            close(in[1]);
+                            close(out[0]);
+                        }
 
                         // Execute the command with execvp
                         if (execvp(toExecute[0], toExecute)) {
                             puts(strerror(errno));
                             exit(127);
                         }
+
                     } else {
                         // Parent
 
