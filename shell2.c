@@ -125,82 +125,80 @@ int main(int argc, char *argv[], char *envp[]) {
                 char buf[BUFF];
                 buf[0] = '\0';
 
-                    // Enter a for loop to execute each pipe sequentially
-                    for(int i = 0; i <= count; i++) {
-                        // Pipe declarations
-                        int in[2], out[2], childPid;
+                // Enter a for loop to execute each pipe sequentially
+                for (int i = 0; i <= count; i++) {
+                    // Pipe declarations
+                    int in[2], out[2], childPid;
 
-                        // Create pipes
-                        if (pipe(in) < 0) error("pipe in");
-                        if (pipe(out) < 0) error("pipe out");
+                    // Create pipes
+                    if (pipe(in) < 0) error("pipe in");
+                    if (pipe(out) < 0) error("pipe out");
 
-                        // Argument holder declarations
-                        char *toExecute[ARR_SIZE];
-                        size_t nArgsExecute;
+                    // Argument holder declarations
+                    char *toExecute[ARR_SIZE];
+                    size_t nArgsExecute;
 
-                        // Split the args into two args by the first encountered |
-                        splitter(args, toExecute, args, ARR_SIZE, &num_args, &nArgsExecute, &num_args);
+                    // Split the args into two args by the first encountered |
+                    splitter(args, toExecute, args, ARR_SIZE, &num_args, &nArgsExecute, &num_args);
 
-                        childPid = fork();
-                        if(childPid == -1) {
-                            printf("grandchild fork error\n");
-                        }else if(childPid == 0) {
-                            // Child
+                    childPid = fork();
+                    if (childPid == -1) {
+                        printf("grandchild fork error\n");
+                    } else if (childPid == 0) {
+                        // Child
 
 #ifdef DEBUG
-// Add debug output here
+                        // Add debug output here
                             printf("Command Grandchild is executing = %s\n", toExecute[0]);
 #endif
 
-                            // Close stdin, stdout, sterr
-                            close(0);
-                            close(1);
-                            close(2);
+                        // Close stdin, stdout, stderr
+                        close(0);
+                        close(1);
+                        close(2);
 
-                            // Make pipes new stdin, stdout, and stderr
-                            dup2(in[0], 0);
-                            dup2(out[1], 1);
-                            dup2(out[1], 2);
+                        // Make pipes new stdin, stdout, and stderr
+                        dup2(in[0], 0);
+                        dup2(out[1], 1);
+                        dup2(out[1], 2);
 
-                            // Close ends of pipe that parent will use
-                            close(in[1]);
-                            close(out[0]);
+                        // Close ends of pipe that parent will use
+                        close(in[1]);
+                        close(out[0]);
 
-                            // Execute the command with execvp
-                            if(execvp(toExecute[0], toExecute)) {
-                                puts(strerror(errno));
-                                exit(127);
-                            }
-                            //exit(1);
-                        } else {
-                            // Parent
-
-
-                            // Close the pipe ends the child used
-                            close(in[0]);
-                            close(out[1]);
-
-                            usleep(1000);
-                            // Write data to the child as input for command
-                            if(buf[0] != '\0') {
-#ifdef DEBUG
-                                printf("writing to grandchild\n");
-#endif
-                                write(in[1], buf, strlen(buf));
-                            }
-                            // Close the pipe so the child does not block execution
-                            // This sends EOF to the child on it's stdin
-                            close(in[1]);
-
-                            int n = read(out[0], buf, BUFF - 1);
-                            buf[n] = 0;
-                            close(out[0]);
-                            childPid = wait(NULL);
+                        // Execute the command with execvp
+                        if (execvp(toExecute[0], toExecute)) {
+                            puts(strerror(errno));
+                            exit(127);
                         }
+                    } else {
+                        // Parent
+
+                        // Close the pipe ends the child used
+                        close(in[0]);
+                        close(out[1]);
+
+                        usleep(1000);
+                        // Write data to the child as input for command
+                        if (buf[0] != '\0') {
+#ifdef DEBUG
+                            printf("writing to grandchild\n");
+#endif
+                            write(in[1], buf, strlen(buf));
+                        }
+                        // Close the pipe so the child does not block execution
+                        // This sends EOF to the child on it's stdin
+                        close(in[1]);
+
+                        int n = read(out[0], buf, BUFF - 1);
+                        buf[n] = 0;
+                        close(out[0]);
+                        childPid = wait(NULL);
                     }
-                    // After for loop print what was returned by the last grandchild
-                    printf("%s\n",buf);
-                    exit(0);
+                }
+                // After for loop print what was returned by the last grandchild
+                printf("%s\n", buf);
+                exit(0);
             }
         }
     }
