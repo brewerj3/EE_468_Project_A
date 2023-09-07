@@ -168,7 +168,7 @@ int main(int argc, char *argv[], char *envp[]) {
                             dup2(in[i - 1][0], 0);
                             // Close ends of pipe that parent will use
                             close(out[i - 1][0]);
-                            usleep(10);
+                            usleep(1000);
                         } else  if(i == 0) {
 #ifdef DEBUG
                             printf("First grandchild makes out[%i][1] new stdout, stderr\n", i);
