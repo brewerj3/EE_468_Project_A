@@ -127,14 +127,17 @@ int main(int argc, char *argv[], char *envp[]) {
 
                 // Pipe declarations
                 int childPid;
-                int pipeIn[count + 1][2];
-                int pipeOut[count + 1][2];
+                int in[count + 1][2];
+                int out[count + 1][2];
 
-                // Enter a for loop to execute each pipe sequentially
+                // Create pipes
+                for(int i = 0; i <= count; i++) {
+                    if(pipe(in[i]) < 0) error("pipe in");
+                    if(pipe(out[i]) < 0) error("pipe out");
+                }
+
+                // Enter a for loop to execute each pipe command
                 for (int i = 0; i <= count; i++) {
-                    // Create pipes
-                    if(pipe(pipeIn[i]) < 0) error("pipe in");
-                    if(pipe(pipeOut[i]) < 0) error("pipe out");
 
                     // Argument holder declarations
                     char *toExecute[ARR_SIZE];
@@ -146,51 +149,53 @@ int main(int argc, char *argv[], char *envp[]) {
                     childPid = fork();
                     if (childPid == -1) {
                         printf("grandchild fork error\n");
+                        exit(1);
                     } else if (childPid == 0) {
                         // Child
-
 #ifdef DEBUG
                         // Add debug output here
                         printf("Command Grandchild is executing = %s, i = %i\n", toExecute[0], i);
 #endif
 
                         if(count == i) {
-                            // Don't close stdout on the last one.
+                            // Don't close stdout or stderr on the last one.
 #ifdef DEBUG
-                            printf("Count = %i equals i = %i \n",count, i);
+                            printf("Last grandchild closes out[%i][0] makes in[%i][0] new stdin \n", i - 1, i - 1);
 #endif
-                            // Close stdin, stderr
+                            // Close stdin
                             close(0);
-                            close(2);
-                            // Make pipes new stdin, stdout, and stderr
-                            dup2(pipeIn[i - 1][0], 0);
-                            dup2(pipeOut[i][1], 2);
+                            // Make pipes new stdin
+                            dup2(in[i - 1][0], 0);
                             // Close ends of pipe that parent will use
-                            close(pipeOut[i - 1][0]);
+                            close(out[i - 1][0]);
+                            usleep(10);
                         } else  if(i == 0) {
+#ifdef DEBUG
+                            printf("First grandchild makes out[%i][1] new stdout, stderr\n", i);
+#endif
                             // First grandchild does not need stdin
                             // Close stdout, stderr
                             close(1);
                             close(2);
                             // Make pipes new stdout, and stderr
-                            dup2(pipeOut[i][1], 1);
-                            dup2(pipeOut[i][1], 2);
+                            dup2(out[i][1], 1);
+                            dup2(out[i][1], 2);
                             // Close ends of pipe that parent will use
-                            close(pipeIn[i - 1][1]);
-                            close(pipeOut[i - 1][0]);
+                            close(in[i][1]);
+                            close(out[i][0]);
                         } else {
                             // Close stdin, stdout, stderr
                             close(0);
                             close(1);
                             close(2);
                             // Make pipes new stdin, stdout, and stderr
-                            dup2(pipeIn[i - 1][0], 0);
-                            dup2(pipeOut[i][1], 1);
-                            dup2(pipeOut[i][1], 2);
+                            dup2(in[i - 1][0], 0);
+                            dup2(out[i][1], 1);
+                            dup2(out[i][1], 2);
 
                             // Close ends of pipe that parent will use
-                            close(pipeIn[i - 1][1]);
-                            close(pipeOut[i - 1][0]);
+                            close(in[i - 1][1]);
+                            close(out[i - 1][0]);
                         }
 
                         // Execute the command with execvp
@@ -203,8 +208,8 @@ int main(int argc, char *argv[], char *envp[]) {
                         // Parent
 
                         // Close the pipe ends the child used
-                        close(pipeIn[i][0]);
-                        close(pipeOut[i][1]);
+                        close(in[i][0]);
+                        close(out[i][1]);
 
                         //usleep(1000);
                         // Write data to the child as input for command
@@ -216,7 +221,7 @@ int main(int argc, char *argv[], char *envp[]) {
                         }
                         // Close the pipe so the child does not block execution
                         // This sends EOF to the child on it's stdin
-                        close(pipeIn[i][1]);
+                        close(in[i][1]);
 
                         //int n = read(out[0], buf, BUFF - 1);
                         //buf[n] = 0;
