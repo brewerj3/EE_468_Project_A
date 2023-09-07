@@ -39,7 +39,8 @@ void splitter(char **argToSplit, char **splitOne, char **splitTwo, size_t args_s
     }
     *nargsOne = i;
     // Increment by one to skip |
-    splitOne[++i] = NULL;
+    splitOne[i] = NULL;
+    i++;
     size_t j = 0;
     for (; j + i < *nargsToSplit; j++) {
         splitTwo[j] = argToSplit[i + j];
@@ -188,6 +189,7 @@ int main(int argc, char *argv[], char *envp[]) {
 
                             // Close links parent will use
                             close(link[0][1]);
+                            close(link[1][0]);
                         } else  if(count == i) {
                             // Last grandchild outputs final response to stdout.
                             // Don't close stdout or stderr on the last one.
@@ -229,8 +231,7 @@ int main(int argc, char *argv[], char *envp[]) {
 
                             close(link[i][1]);
                             close(link[i + 1][0]);
-                            close(link[0][0]);
-                            close(link[0][1]);
+
                         }
 
                         // Execute the command with execvp
@@ -241,13 +242,8 @@ int main(int argc, char *argv[], char *envp[]) {
 
                     } else {
                         // Parent
-                        if(count == i) {
-                            close(link[i][1]);
-                            close(link[i][0]);
-                        } else {
-                            close(link[i][0]);
-                            close(link[i][1]);
-                        }
+                        close(link[i][0]);
+                        close(link[i][1]);
                     }
                 }
                 // After for loop print what was returned by the last grandchild
