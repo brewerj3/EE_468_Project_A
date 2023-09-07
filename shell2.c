@@ -19,7 +19,7 @@
 #define ARR_SIZE 80
 #define BUFF 10000
 
-#define DEBUG 1  /* In case you want debug messages */
+//#define DEBUG 1  /* In case you want debug messages */
 
 void error(char *s);
 
@@ -122,7 +122,7 @@ int main(int argc, char *argv[], char *envp[]) {
                 printf("Child (%d) finished\n", pid);
 #endif
             } else {  /* Child executing the command */
-                if(count == 0) {
+                if (count == 0) {
                     if (execvp(args[0], args)) {
                         puts(strerror(errno));
                         exit(127);
@@ -136,15 +136,11 @@ int main(int argc, char *argv[], char *envp[]) {
                 int childPid;
 
                 // Pipe declarations
-                //int in[count + 1][2];
-                //int out[count + 1][2];
                 int link[count + 1][2];
 
                 // Create pipes
-                for(int i = 0; i <= count; i++) {
-                    //if(pipe(in[i]) < 0) error("pipe in");
-                    //if(pipe(out[i]) < 0) error("pipe out");
-                    if(pipe(link[i]) < 0) error("link pipe");
+                for (int i = 0; i <= count; i++) {
+                    if (pipe(link[i]) < 0) error("link pipe");
                 }
 
                 // Enter a for loop to execute each pipe command
@@ -169,7 +165,7 @@ int main(int argc, char *argv[], char *envp[]) {
                             printf("%s\n", toExecute[j]);
                         }*/
 #endif
-                        if(i == 0) {
+                        if (i == 0) {
                             // First grandchild
 #ifdef DEBUG
                             printf("Grandchild %i writes to link[1]\n", i);
@@ -190,7 +186,7 @@ int main(int argc, char *argv[], char *envp[]) {
                             // Close links parent will use
                             close(link[0][1]);
                             close(link[1][0]);
-                        } else  if(count == i) {
+                        } else if (count == i) {
                             // Last grandchild outputs final response to stdout.
                             // Don't close stdout or stderr on the last one.
 #ifdef DEBUG
@@ -231,9 +227,7 @@ int main(int argc, char *argv[], char *envp[]) {
 
                             close(link[i][1]);
                             close(link[i + 1][0]);
-
                         }
-
                         // Execute the command with execvp
                         if (execvp(toExecute[0], toExecute)) {
                             puts(strerror(errno));
@@ -248,7 +242,6 @@ int main(int argc, char *argv[], char *envp[]) {
                 }
                 // After for loop print what was returned by the last grandchild
                 usleep(10000);
-                //printf("for loop finished, count = %i\n",count);
                 exit(0);
             }
         }
