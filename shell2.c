@@ -162,11 +162,19 @@ int main(int argc, char *argv[], char *envp[]) {
                         exit(1);
                     } else if (childPid == 0) {
                         // Grand child
+#ifdef DEBUG
+                        /*printf("Grandchild %i will execute\n", i);
+                        for(size_t j = 0; j < nArgsExecute; i++ ) {
+                            printf("%s\n", toExecute[j]);
+                        }*/
+#endif
                         if(i == 0) {
                             // First grandchild
 #ifdef DEBUG
-                            printf("Grandchild %i makes link[1][1] new stdout, stderr\n", i);
+                            printf("Grandchild %i writes to link[1]\n", i);
                             printf("Grandchild %i executes %s\n", i, toExecute[0]);
+                            printf("Grandchild %i number of Args %zu\n", i, nArgsExecute);
+                            printf("\n");
 #endif
                             // Close stdin, stdout, stderr
                             close(0);   // Close stdin
@@ -184,8 +192,11 @@ int main(int argc, char *argv[], char *envp[]) {
                             // Last grandchild outputs final response to stdout.
                             // Don't close stdout or stderr on the last one.
 #ifdef DEBUG
-                            printf("Grandchild %i makes link[%i][0] new stdin \n", i, i);
+                            printf("Grandchild %i reads from link[%i]\n", i, i);
+                            printf("Grandchild %i does not change stdout\n", i);
                             printf("Grandchild %i executes %s\n", i, toExecute[0]);
+                            printf("Grandchild %i number of Args %zu\n", i, nArgsExecute);
+                            printf("\n");
 #endif
                             // Close stdin
                             close(0);   // Close stdin
@@ -198,8 +209,11 @@ int main(int argc, char *argv[], char *envp[]) {
                         } else {
                             // Grandchildren between first and last
 #ifdef DEBUG
-                            printf("Grandchild %i makes link[%i][0] new stdin \n", i, i);
+                            printf("Grandchild %i reads from link[%i]\n", i, i);
+                            printf("Grandchild %i writes to link[%i]\n", i, i + 1);
                             printf("Grandchild %i executes %s\n", i, toExecute[0]);
+                            printf("Number of Args = %zu\n",nArgsExecute);
+                            printf("\n");
 #endif
                             // Close stdin, stdout, stderr
                             close(0);   // Close stdin
@@ -207,12 +221,16 @@ int main(int argc, char *argv[], char *envp[]) {
                             close(2);   // Close stderr
 
                             // Make pipes new stdin, stdout, stderr
-                            dup2(link[i - 1][0], 0);    // Link i - 1 is reading from parent
-                            dup2(link[i][1], 1);        // Link i is directing stdout to next grandchild
-                            dup2(link[i][1], 2);        // Link i is directing stderr to next grandchild
+                            dup2(link[i][0], 0);            // Link i is reading from parent
+                            dup2(link[i + 1][1], 1);        // Link i + 1 is directing stdout to next grandchild
+                            dup2(link[i + 1][1], 2);        // Link i + 1 is directing stderr to next grandchild
 
                             // Close links parent will use
+
                             close(link[i][1]);
+                            close(link[i + 1][0]);
+                            close(link[0][0]);
+                            close(link[0][1]);
                         }
 
                         // Execute the command with execvp
@@ -225,6 +243,7 @@ int main(int argc, char *argv[], char *envp[]) {
                         // Parent
                         if(count == i) {
                             close(link[i][1]);
+                            close(link[i][0]);
                         } else {
                             close(link[i][0]);
                             close(link[i][1]);
@@ -233,7 +252,7 @@ int main(int argc, char *argv[], char *envp[]) {
                 }
                 // After for loop print what was returned by the last grandchild
                 usleep(10000);
-                printf("for loop finished, count = %i\n",count);
+                //printf("for loop finished, count = %i\n",count);
                 exit(0);
             }
         }
