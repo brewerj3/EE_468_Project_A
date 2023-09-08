@@ -39,7 +39,8 @@ void splitter(char **argToSplit, char **splitOne, char **splitTwo, size_t args_s
     }
     *nargsOne = i;
     // Increment by one to skip |
-    splitOne[++i] = NULL;
+    splitOne[i] = NULL;
+    i++;
     size_t j = 0;
     for (; j + i < *nargsToSplit; j++) {
         splitTwo[j] = argToSplit[i + j];
@@ -121,18 +122,29 @@ int main(int argc, char *argv[], char *envp[]) {
                 printf("Child (%d) finished\n", pid);
 #endif
             } else {  /* Child executing the command */
+                if (count == 0) {
+                    if (execvp(args[0], args)) {
+                        puts(strerror(errno));
+                        exit(127);
+                    }
+                }
                 // Character buffer input
                 char buf[BUFF];
                 buf[0] = '\0';
 
-                // Enter a for loop to execute each pipe sequentially
-                for (int i = 0; i <= count; i++) {
-                    // Pipe declarations
-                    int in[2], out[2], childPid;
+                // Pid for grandchild
+                int childPid;
 
-                    // Create pipes
-                    if (pipe(in) < 0) error("pipe in");
-                    if (pipe(out) < 0) error("pipe out");
+                // Pipe declarations
+                int link[count + 1][2];
+
+                // Create pipes
+                for (int i = 0; i <= count; i++) {
+                    if (pipe(link[i]) < 0) error("link pipe");
+                }
+
+                // Enter a for loop to execute each pipe command
+                for (int i = 0; i <= count; i++) {
 
                     // Argument holder declarations
                     char *toExecute[ARR_SIZE];
@@ -144,60 +156,92 @@ int main(int argc, char *argv[], char *envp[]) {
                     childPid = fork();
                     if (childPid == -1) {
                         printf("grandchild fork error\n");
+                        exit(1);
                     } else if (childPid == 0) {
-                        // Child
-
+                        // Grand child
 #ifdef DEBUG
-                        // Add debug output here
-                            printf("Command Grandchild is executing = %s\n", toExecute[0]);
+                        /*printf("Grandchild %i will execute\n", i);
+                        for(size_t j = 0; j < nArgsExecute; i++ ) {
+                            printf("%s\n", toExecute[j]);
+                        }*/
 #endif
+                        if (i == 0) {
+                            // First grandchild
+#ifdef DEBUG
+                            printf("Grandchild %i writes to link[1]\n", i);
+                            printf("Grandchild %i executes %s\n", i, toExecute[0]);
+                            printf("Grandchild %i number of Args %zu\n", i, nArgsExecute);
+                            printf("\n");
+#endif
+                            // Close stdin, stdout, stderr
+                            close(0);   // Close stdin
+                            close(1);   // Close stdout
+                            close(2);   // Close stderr
 
-                        // Close stdin, stdout, stderr
-                        close(0);
-                        close(1);
-                        close(2);
+                            // Make pipes new stdin, stdout, stderr
+                            dup2(link[0][0], 0);    // Link 0 is reading from parent
+                            dup2(link[1][1], 1);    // Link 1 is directing stdout to next grandchild
+                            dup2(link[1][1], 2);    // Link 1 is directing stderr to next grandchild
 
-                        // Make pipes new stdin, stdout, and stderr
-                        dup2(in[0], 0);
-                        dup2(out[1], 1);
-                        dup2(out[1], 2);
+                            // Close links parent will use
+                            close(link[0][1]);
+                            close(link[1][0]);
+                        } else if (count == i) {
+                            // Last grandchild outputs final response to stdout.
+                            // Don't close stdout or stderr on the last one.
+#ifdef DEBUG
+                            printf("Grandchild %i reads from link[%i]\n", i, i);
+                            printf("Grandchild %i does not change stdout\n", i);
+                            printf("Grandchild %i executes %s\n", i, toExecute[0]);
+                            printf("Grandchild %i number of Args %zu\n", i, nArgsExecute);
+                            printf("\n");
+#endif
+                            // Close stdin
+                            close(0);   // Close stdin
 
-                        // Close ends of pipe that parent will use
-                        close(in[1]);
-                        close(out[0]);
+                            // Make pipes new stdin
+                            dup2(link[i][0], 0);
 
+                            // Close links parent will use
+                            close(link[i][1]);
+                        } else {
+                            // Grandchildren between first and last
+#ifdef DEBUG
+                            printf("Grandchild %i reads from link[%i]\n", i, i);
+                            printf("Grandchild %i writes to link[%i]\n", i, i + 1);
+                            printf("Grandchild %i executes %s\n", i, toExecute[0]);
+                            printf("Number of Args = %zu\n",nArgsExecute);
+                            printf("\n");
+#endif
+                            // Close stdin, stdout, stderr
+                            close(0);   // Close stdin
+                            close(1);   // Close stdout
+                            close(2);   // Close stderr
+
+                            // Make pipes new stdin, stdout, stderr
+                            dup2(link[i][0], 0);            // Link i is reading from parent
+                            dup2(link[i + 1][1], 1);        // Link i + 1 is directing stdout to next grandchild
+                            dup2(link[i + 1][1], 2);        // Link i + 1 is directing stderr to next grandchild
+
+                            // Close links parent will use
+
+                            close(link[i][1]);
+                            close(link[i + 1][0]);
+                        }
                         // Execute the command with execvp
                         if (execvp(toExecute[0], toExecute)) {
                             puts(strerror(errno));
                             exit(127);
                         }
+
                     } else {
                         // Parent
-
-                        // Close the pipe ends the child used
-                        close(in[0]);
-                        close(out[1]);
-
-                        usleep(1000);
-                        // Write data to the child as input for command
-                        if (buf[0] != '\0') {
-#ifdef DEBUG
-                            printf("writing to grandchild\n");
-#endif
-                            write(in[1], buf, strlen(buf));
-                        }
-                        // Close the pipe so the child does not block execution
-                        // This sends EOF to the child on it's stdin
-                        close(in[1]);
-
-                        int n = read(out[0], buf, BUFF - 1);
-                        buf[n] = 0;
-                        close(out[0]);
-                        childPid = wait(NULL);
+                        close(link[i][0]);
+                        close(link[i][1]);
                     }
                 }
                 // After for loop print what was returned by the last grandchild
-                printf("%s\n", buf);
+                usleep(10000);
                 exit(0);
             }
         }
